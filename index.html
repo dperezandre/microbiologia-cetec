@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Mapa Mental de Microbiologia</title>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --ink:#1d2330; --muted:#5d6676; --line:#d9d6cc; --accent:#2b5fd9;
+  --node:#ffffff; --shadow:0 1px 2px rgba(20,25,40,.08),0 2px 8px rgba(20,25,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --bg:#14171e; --panel:#1c212b; --ink:#e8ebf2; --muted:#97a0b2; --line:#2e3542; --accent:#7ea2ff; --node:#1f2531; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+}
+:root[data-theme="dark"]{ --bg:#14171e; --panel:#1c212b; --ink:#e8ebf2; --muted:#97a0b2; --line:#2e3542; --accent:#7ea2ff; --node:#1f2531; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));background:var(--panel);border-bottom:1px solid var(--line)}
+h1{font-size:17px;margin:0 8px 0 0;font-weight:700}
+nav{display:flex;gap:4px}
+.tab{border:0;background:transparent;color:var(--muted);padding:7px 12px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.tab[aria-selected=true]{background:var(--accent);color:#fff}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
+button.b,select,input[type=search]{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer}
+button.b:hover{border-color:var(--accent)}
+button.b[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+input[type=search]{cursor:text;width:150px}
+main{flex:1;min-height:0;position:relative}
+section.view{position:absolute;inset:0;display:none;overflow:auto}
+section.view.on{display:block}
+/* mapa */
+#vp{position:absolute;inset:0;overflow:hidden;cursor:grab;touch-action:none;
+  background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:24px 24px}
+#vp.drag{cursor:grabbing}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#links{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.node{position:absolute;max-width:250px;min-width:60px;padding:7px 11px;border-radius:10px;background:var(--node);
+  border:1.5px solid var(--c);box-shadow:var(--shadow);font-size:13.5px;cursor:pointer;user-select:none;transition:opacity .15s}
+.node.d0{background:var(--ink);color:var(--bg);border-color:var(--ink);font-size:20px;font-weight:800;padding:14px 20px;max-width:none;cursor:default}
+.node.d1{background:var(--c);color:#fff;font-weight:700;font-size:15px;padding:9px 14px}
+.node.d2{font-weight:650;border-width:2px}
+.node.tip{border-style:dashed;background:transparent;font-style:italic;color:var(--muted);box-shadow:none}
+.node.has::after{content:attr(data-n);position:absolute;right:-9px;top:50%;transform:translateY(-50%);min-width:18px;height:18px;border-radius:9px;
+  background:var(--c);color:#fff;font:700 10.5px/18px system-ui;text-align:center;padding:0 4px}
+.node.has.open::after{content:"–";}
+.node.d0::after{display:none}
+.node.has{padding-right:20px}
+.node.dim{opacity:.18}
+.node.hit{outline:3px solid #f5b50a;outline-offset:2px}
+.node.done{border-color:#1f9d55;box-shadow:0 0 0 2px rgba(31,157,85,.25)}
+.node .ok{display:none;position:absolute;left:-9px;top:-9px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--c);background:var(--panel);color:#1f9d55;font-size:11px;line-height:17px;text-align:center;padding:0}
+.node:hover .ok,.node.done .ok{display:block}
+.node.done .ok{background:#1f9d55;color:#fff;border-color:#1f9d55}
+.node.d0 .ok,.node.d1 .ok{display:none!important}
+.recall .node.leaf:not(.shown):not(.tip) .t{filter:blur(6px)}
+.recall .node.leaf:not(.shown):not(.tip){cursor:help}
+.badge{font-size:11px;font-weight:700;opacity:.85;margin-left:6px}
+#legend{position:absolute;left:12px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);max-width:360px;line-height:1.6}
+#prog{position:absolute;right:12px;top:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;min-width:170px}
+#prog .bar{height:6px;border-radius:3px;background:var(--line);margin-top:5px;overflow:hidden}
+#prog .bar i{display:block;height:100%;background:#1f9d55;width:0}
+/* paineis */
+.page{max-width:980px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px))}
+.page h2{margin:26px 0 8px;font-size:19px}
+.page h2:first-child{margin-top:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0}
+.page .tw,.page{overflow-x:hidden}
+table{display:block;overflow-x:auto;width:100%;border-collapse:collapse;font-size:13.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:8px 0}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:color-mix(in srgb,var(--accent) 14%,var(--panel));font-size:12.5px}
+tr:last-child td{border-bottom:0}
+.warn{border-left:4px solid #e08a00}
+.tipbox{border-left:4px solid var(--accent)}
+ul{padding-left:20px;margin:6px 0}
+li{margin:3px 0}
+.muted{color:var(--muted)}
+/* flashcards */
+#fc{max-width:620px;margin:0 auto;padding:22px max(16px,env(safe-area-inset-right,0px)) 22px max(16px,env(safe-area-inset-left,0px));text-align:center}
+.flip{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px;cursor:pointer;box-shadow:var(--shadow);font-size:18px}
+.flip small{color:var(--muted);font-size:12px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
+.flip.back{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+.row .b{padding:9px 16px;font-size:14px}
+.good{background:#1f9d55!important;color:#fff!important;border-color:#1f9d55!important}
+.bad{background:#d0453b!important;color:#fff!important;border-color:#d0453b!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>🔬 Microbiologia · CETEC</h1>
+  <nav id="tabs" role="tablist">
+    <button class="tab" role="tab" data-v="map" aria-selected="true">Mapa mental</button>
+    <button class="tab" role="tab" data-v="cards" aria-selected="false">Flashcards</button>
+    <button class="tab" role="tab" data-v="comp" aria-selected="false">Comparativos</button>
+    <button class="tab" role="tab" data-v="plan" aria-selected="false">Como estudar</button>
+  </nav>
+  <div class="tools" id="maptools">
+    <input type="search" id="q" placeholder="Buscar termo…" aria-label="Buscar">
+    <button class="b" id="bAll">Expandir tudo</button>
+    <button class="b" id="bOne">Só ramos</button>
+    <button class="b" id="bFit">Ajustar tela</button>
+    <button class="b" id="bTip" aria-pressed="true">💡 Dicas</button>
+    <button class="b" id="bRecall" aria-pressed="false" title="Esconde os detalhes finais; clique para revelar e tente lembrar antes">🧠 Modo recall</button>
+    <button class="b" id="bReset" title="Zerar os ✓ de progresso">Zerar ✓</button>
+  </div>
+</header>
+<main>
+  <section class="view on" id="v-map">
+    <div id="vp"><div id="world"><svg id="links"></svg></div></div>
+    <div id="prog"><b id="pt">Progresso</b><div class="bar"><i id="pb"></i></div></div>
+    <div id="legend">Clique num ramo: abre/fecha · Arraste: move · Roda do mouse ou pinça: zoom<br>
+      <b>✓</b> (passe o mouse num item) marca como dominado · <b>🧠 Modo recall</b>: esconde os detalhes, você tenta lembrar e clica para conferir
+      <br><button class="b" id="hideLeg" style="margin-top:6px;padding:3px 8px">Entendi, ocultar</button></div>
+  </section>
+  <section class="view" id="v-cards"><div id="fc"></div></section>
+  <section class="view" id="v-comp"><div class="page" id="compPage"></div></section>
+  <section class="view" id="v-plan"><div class="page" id="planPage"></div></section>
+</main>
+
+<script>
+/* ============ DADOS: tudo extraído da apostila (💡 = dica de memorização minha, não é da apostila) ============ */
+const n=(t,c)=>({t,c:c||[]});
+const DATA = n("Microbiologia",[
+ n("1 · História",[
+  n("Leeuwenhoek · 1674",[n("Criou o 1º microscópio"),n("Viu seres em solo, rio, saliva e fezes → “animálculos”"),n("Cartas à Sociedade Real inglesa deram início à Microbiologia")]),
+  n("Pasteur · 1857–1914",[n("Fermentação do vinho = microrganismos (leveduras), não “espontânea”"),n("Acidificar o vinho conserva; deterioração = bactérias"),n("1864: aquecer a 56 °C mata os que alteram o gosto → PASTEURIZAÇÃO (leites e sucos)")]),
+  n("Koch · 1876",[n("1ª prova de que bactéria causa doença: carbúnculo (gado e ovelhas)"),n("Postulados de Koch (4 regras)",[n("1. Presença do micróbio no doente"),n("2. Isolamento em cultura"),n("3. Reprodução da doença"),n("4. Reisolamento do agente"),n("💡 P-I-R-R: Presença → Isolar → Reproduzir → Reisolar")])]),
+  n("Gram · 1888–1893",[n("Método de coloração que separa 2 classes de bactérias"),n("Padronizado e obrigatório nas aulas até hoje")]),
+  n("Fleming · 1928",[n("Descobriu a PENICILINA"),n("Placa de estafilococos contaminada por bolor → cultura se dissolvia ao redor"),n("Bolor = fungo Penicillium; ação bacteriolítica"),n("Nobel aos 64 anos")])
+ ]),
+ n("2 · Conceitos de clínica",[
+  n("Definições",[n("Patologia: estudo científico das doenças (mudanças estruturais e funcionais)"),n("Patogênese: COMO a doença se desenvolve (evolução)"),n("Patogenicidade: capacidade de causar doença superando as defesas do hospedeiro"),n("Virulência: GRAU de patogenicidade"),n("Infecção: invasão/colonização por patógenos — pode existir sem doença"),n("Doença infecciosa: infecção que altera o estado de saúde"),n("💡 Patogenicidade = “pode?”  ·  Virulência = “quão forte?”")]),
+  n("Patógeno oportunista",[n("Vive na microbiota, mas causa doença quando sai do lugar habitual ou há queda imunológica"),n("Ex.: Candida albicans (TGI e genital) → candidíase")]),
+  n("Microbiotas do corpo",[n("Pele: Propionibacterium, Staphylococcus, Micrococcus, Candida"),n("Nariz/garganta: S. aureus, S. epidermidis, S. pneumoniae, Haemophilus, Neisseria (garganta)"),n("Boca: Streptococcus, Lactobacillus, Staphylococcus, Candida"),n("Intestino: E. coli, Bacteroides, Fusobacterium, Enterococcus, Bifidobacterium, Proteus, Klebsiella"),n("Genital: Staphylococcus, Enterococcus, Lactobacillus, Pseudomonas, Klebsiella, Trichomonas vaginalis (protozoário)")]),
+  n("Portas de entrada",[n("Cutânea / parenteral / conjuntiva"),n("Trato respiratório"),n("Trato gastrointestinal"),n("Trato urinário / genital"),n("Patógeno precisa: entrar → aderir → escapar das defesas")])
+ ]),
+ n("3 · Procariontes × Eucariontes",[
+  n("Procariontes",[n("Bactérias e arqueias"),n("Sem núcleo delimitado por membrana")]),
+  n("Eucariontes",[n("Fungos (bolores e leveduras), protozoários, algas, plantas e animais"),n("DNA no núcleo (membrana nuclear)"),n("Organelas: mitocôndria, RE, Golgi, lisossomo, cloroplastos")]),
+  n("Em comum",[n("Ácidos nucleicos, proteínas, lipídeos e carboidratos")])
+ ]),
+ n("4 · Bactérias",[
+  n("Tamanho, forma e arranjo",[n("0,2–2,0 µm de diâmetro · 2–8 µm de comprimento"),n("Cocos (esféricos): redondos, ovais, alongados"),n("Bacilos (bastão): único, diplobacilo, estreptobacilo (cadeia)"),n("Espirais: mais curvaturas, não retas (vibriões, segundo a apostila)")]),
+  n("Estruturas EXTERNAS",[
+   n("Glicocálice / cápsula",[n("Polímero viscoso aderido à parede"),n("Fixação a superfícies; fator de virulência"),n("Foge da fagocitose"),n("Biofilme = substância polimérica extracelular protetora")]),
+   n("Flagelo",[n("Filamento que move a bactéria"),n("Giro forma feixe que empurra o líquido")]),
+   n("Fímbrias",[n("Aderência e colonização"),n("Ex.: Neisseria gonorrhoeae adere às mucosas")]),
+   n("Pili",[n("Longos; ajudam na motilidade (deslizar nas mucosas)"),n("Pseudomonas aeruginosa, N. gonorrhoeae, algumas E. coli")]),
+   n("Parede celular",[n("Rígida; dá a forma; evita ruptura por pressão osmótica"),n("Feita de peptideoglicano (“esqueleto”)"),n("Diferencia Gram+ de Gram–"),n("Penicilina bloqueia as pontes peptídicas → parede fraca → LISE")])
+  ]),
+  n("Coloração de Gram",[
+   n("Passos / corantes",[n("1. Cristal violeta (violeta genciana) + 2. Lugol (iodo) → formam cristais"),n("3. Descolorante álcool-acetona"),n("4. Safranina (contra-corante)")]),
+   n("Gram POSITIVA → azul/roxa",[n("Camada ESPESSA de peptideoglicano"),n("Cristais ficam presos; álcool-acetona não tira")]),
+   n("Gram NEGATIVA → rosa/vermelha",[n("Camada FINA de peptideoglicano + lipopolissacarídeo (LPS) de membrana"),n("Álcool-acetona remove os cristais; safranina cora de rosa")]),
+   n("💡 Positiva = Prende o roxo (parede grossa) · Negativa = Nada fica → só a safranina rosa")
+  ]),
+  n("Estruturas INTERNAS",[
+   n("Membrana plasmática",[n("Bicamada de fosfolipídeos + proteínas"),n("Barreira seletiva (permeabilidade seletiva)"),n("Enzimas que degradam nutrientes e produzem ATP"),n("4 transportes: difusão passiva, difusão facilitada, transporte ativo, osmose"),n("Alvo de antimicrobianos (lesão → entrada de compostos letais)")]),
+   n("Citoplasma",[n("Matriz aquosa: proteínas, carboidratos, lipídeos, íons")]),
+   n("Nucleoide e plasmídeos",[n("Nucleoide: única molécula longa de DNA dupla-fita (identifica a bactéria)"),n("Plasmídeos: DNA circular; ex.: resistência a antibióticos")]),
+   n("Ribossomos",[n("Síntese de proteínas"),n("Dezenas de milhares → aspecto granuloso")]),
+   n("Inclusões e grânulos",[n("Inclusões: depósitos de reserva de nutrientes"),n("Grânulos: metacromáticos, polissacarídicos, de enxofre"),n("Ex.: bactérias sulfurosas oxidam enxofre")]),
+   n("Endósporos",[n("Células dormentes que resistem à falta de nutrientes"),n("Gêneros Clostridium e Bacillus"),n("Clostridium: gangrena, tétano, botulismo, intoxicação alimentar"),n("Sobrevivem à esterilização de alimentos e voltam a vegetar")])
+  ]),
+  n("Crescimento",[
+   n("Exigências",[n("Água, nutrientes (matéria orgânica / carbono), temperatura, oxigênio"),n("Maioria dos patógenos: 35–38 °C")]),
+   n("Fases da curva",[n("LAG: adaptação ao meio"),n("LOG: multiplicação exponencial"),n("ESTACIONÁRIA: nascem ≈ morrem"),n("DECLÍNIO: morrem mais do que nascem"),n("💡 Lag = Latência · Log = Loucura · Estacionária = Empate · Declínio = Derrota")]),
+   n("Oxigênio",[n("Aeróbias estritas: só com O₂"),n("Anaeróbias estritas: só sem nenhum O₂"),n("Anaeróbias facultativas: toleram O₂ mas crescem sem ele — E. coli, Salmonella, enterobactérias")])
+  ]),
+  n("Microbiota normal (Quadro 1)",[
+   n("Bacteroides: cólon, garganta, vagina · anaeróbia estrita"),
+   n("Clostridium: cólon · anaeróbia formadora de esporos"),
+   n("Corynebacterium: nasofaringe, pele, vagina · bacilo Gram+"),
+   n("Enterococcus faecalis: cólon · coco Gram+ (urinária/hospitalar)"),
+   n("E. coli: cólon, vagina, uretra distal · bacilo Gram–"),
+   n("Gardnerella vaginalis: vagina · vaginose bacteriana"),
+   n("Haemophilus: nasofaringe, conjuntiva · cocobacilo Gram–"),
+   n("Lactobacillus: boca, cólon, vagina · bacilo Gram+ (pH vaginal)"),
+   n("Neisseria: boca, nasofaringe · cocos Gram–"),
+   n("Cutibacterium acnes: pele, glândulas sebáceas · acne"),
+   n("Pseudomonas aeruginosa: cólon, pele · Gram–, oportunista"),
+   n("S. aureus: narinas, pele · infecções piogênicas"),
+   n("S. epidermidis: pele, nariz, boca, vagina, uretra · biofilme em próteses"),
+   n("Estreptococos viridans: boca, nasofaringe · endocardite"),
+   n("Candida albicans: boca, cólon, vagina · fungo")
+  ])
+ ]),
+ n("5 · Fungos",[
+  n("Estrutura",[
+   n("Bolores (fungos filamentosos)",[n("Hifas = filamentos de células; septadas (com septo) ou cenocíticas (contínuas)"),n("Hifa vegetativa: nutrientes · reprodutiva: reprodução"),n("Micélio = conjunto de hifas (o “mofo/algodão”)")]),
+   n("Leveduras",[n("Unicelulares, esféricas/ovais; sem hifas nem micélio"),n("Ex.: Candida albicans; Saccharomyces cerevisiae (cerveja, pão)"),n("Brotamento ou fissão (>24 células por broto)"),n("Pseudo-hifas: brotos que não se soltam, em fileira")]),
+   n("Fungos dimórficos",[n("Alternam levedura ↔ filamento"),n("Fator de patogenicidade: esporos aéreos são inalados"),n("Histoplasma, Paracoccidioides, Cryptococcus, Aspergillus")])
+  ]),
+  n("Reprodução",[
+   n("Filamentosos: fragmentação das hifas · Leveduras: brotamento/fissão"),
+   n("Esporos assexuados: formados pelas hifas, geneticamente iguais ao parental"),
+   n("Esporos sexuados: fusão de núcleos de cepas opostas da mesma espécie"),
+   n("Toleram pH ~5 (ácido demais para bactérias)")
+  ]),
+  n("Micoses",[
+   n("Superficiais: fios de cabelo e epiderme superficial · Pitiríase versicolor (Malassezia)"),
+   n("Cutâneas: dermatófitos secretam queratinase (pele, unha, cabelo) · Microsporum, Trichophyton, Epidermophyton"),
+   n("Subcutâneas: fungos saprófitas do solo/vegetação · Esporotricose (Sporothrix schenckii, de plantas)"),
+   n("Sistêmicas: esporos inalados → pulmão → disseminam · Histoplasmose, Paracoccidioidomicose, Coccidioidomicose, Blastomicose"),
+   n("Oportunistas: Candidíase, Criptococose, Aspergilose, Mucormicose, Pneumocystis jirovecii (AIDS)")
+  ])
+ ]),
+ n("6 · Vírus",[
+  n("Características",[n("Parasitas intracelulares OBRIGATÓRIOS (usam o maquinário da célula)"),n("Poucas ou nenhuma enzima própria"),n("Classificados pelo material genético: DNA ou RNA, fita simples ou dupla"),n("Infectam via receptores da superfície celular"),n("DNA → doenças que reaparecem (ex.: herpes, latente; volta com imunidade baixa)")]),
+  n("Estrutura (20–1000 nm)",[n("Vírion: partícula completa e infecciosa"),n("Capsídeo: revestimento proteico formado por capsômeros"),n("Envelope (só em alguns): lipídeos, proteínas, carboidratos"),n("Espículas: complexos carboidrato-proteína no envelope (ajudam a identificar)")]),
+  n("Multiplicação (fases da apostila)",[n("1. Adsorção: liga-se a receptores (glicoproteínas)"),n("2. Penetração: endocitose (vesícula)"),n("3. Desnudamento: separa ácido nucleico do envoltório"),n("4. Biossíntese: replica e sintetiza proteínas com enzimas da célula (DNA: herpesvírus, adenovírus)"),n("5. Liberação: após maturação (material genético + proteínas)"),n("💡 A-P-D-B-L: “A Priscila Desenhou Borboletas Lindas”")]),
+  n("Resp. comuns (Quadro 3)",[n("Resfriado: rinovírus, coronavírus, adenovírus"),n("Faringite/laringite: adenovírus, coxsackie, herpes simples"),n("Crupe (tosse de cachorro): parainfluenza, influenza"),n("Bronquiolite: sincicial respiratório, parainfluenza, influenza")])
+ ]),
+ n("7 · Protozoários e Helmintos",[
+  n("Protozoários · gerais",[n("Eucariontes unicelulares; água e solo (contaminam alimentos mal higienizados)"),n("Trofozoíto: forma de alimentação/crescimento; cisto: forma de resistência no ambiente"),n("Vetores: ex.: malária (Plasmodium) — mosquito Anopheles")]),
+  n("Reprodução",[n("Assexuada: fissão, brotamento, esquizogonia (fissão múltipla)"),n("Sexuada: conjugação (meiose, troca de núcleos haploides)")]),
+  n("Grupos de importância médica",[
+   n("Excavata",[n("Giardia duodenalis (lamblia): delgado, cisto nas fezes"),n("Trichomonas vaginalis: transmissão sexual"),n("Euglenozoa/hemoflagelados: Trypanosoma brucei (sono), T. cruzi (Chagas, barbeiro)")]),
+   n("Amoebozoa",[n("Amebas/pseudópodes: Entamoeba histolytica, Amoeba proteus, Balamuthia")]),
+   n("Apicomplexa",[n("Parasitas intracelulares obrigatórios, imóveis quando maduros"),n("Plasmodium (malária), Toxoplasma gondii (alimentos), Cryptosporidium")]),
+   n("Ciliophora: Balantidium coli (cílios) · Mastigophora: flagelos · Sarcodina: pseudópodes")
+  ]),
+  n("Helmintos",[
+   n("Gerais",[n("Eucariontes multicelulares; hospedeiro intermediário (larva) e definitivo (adulto)"),n("Dioicos (sexos separados) ou monoicos/hermafroditas")]),
+   n("Platelmintos (achatados)",[n("Trematoda: forma de folha, ventosas oral e ventral (Clonorchis sinensis)"),n("Cestoda (tênias): escólex com ventosas; corpo em proglótides; proglótides maduras soltam ovos nas fezes")]),
+   n("Nematódeos (cilíndricos)",[n("Boca, intestino e ânus; maioria dioica (macho menor)"),n("Ascaris, ancilostomídeos e tricurídeos"),n("Ovos/água: Ascaris, Trichuris · Larvas pela pele: Strongyloides, Necator, Ancylostoma")])
+  ])
+ ]),
+ n("8 · IACS (infecções hospitalares)",[
+  n("Conceito",[n("Associadas aos cuidados de saúde: hospitais, asilos, ambulatórios, home care"),n("Tradicionalmente: infecções nosocomiais")]),
+  n("Fatores",[n("Microrganismos no ambiente hospitalar"),n("Hospedeiros comprometidos"),n("Cadeia de transmissão no hospital")]),
+  n("Vias de transmissão",[n("Contato direto (profissional→paciente ou paciente→paciente)"),n("Contato indireto: fômites e sistemas de ventilação"),n("Higiene das mãos e protocolos = prevenção")])
+ ]),
+ n("9 · Controle e higienização",[
+  n("Grupos de risco",[n("1: risco baixo (probióticos, Lactobacillus, leveduras)"),n("2: individual moderado, coletivo baixo (B. cereus, Toxoplasma, Candida, Giardia, hepatite B)"),n("3: individual alto, coletivo limitado (M. tuberculosis, C. botulinum)"),n("4: risco alto, sem tratamento efetivo (Ebola)")]),
+  n("Áreas do hospital",[n("Críticas: graves e procedimentos invasivos (CTI)"),n("Semicríticas: internados — enfermarias, quartos, ambulâncias, ambulatórios")]),
+  n("Limpeza",[n("Concorrente (diária) × Terminal (máquinas e químicos mais fortes)"),n("1º passo de toda desinfecção/esterilização: água + detergente"),n("Remove sujeira e matéria orgânica; NÃO elimina microrganismos")]),
+  n("Assepsia",[n("Impedir entrada/disseminação de microrganismos"),n("Higiene das mãos, luvas estéreis, campos estéreis, esterilização, técnica estéril"),n("Ex.: cateter venoso central")]),
+  n("Antissepsia",[n("Química em tecido VIVO (mãos, pele)"),n("Álcool 70%, clorexidina, PVPI")]),
+  n("Desinfecção e esterilização",[n("Baixo nível: bactérias vegetativas e vírus — álcool 70%"),n("Nível intermediário: + fungos e bacilo da tuberculose — hipoclorito de sódio, álcool 70%"),n("Alto nível: quase todos — glutaraldeído, ácido peracético"),n("Esterilização: elimina TUDO inclusive esporos — estufa 180 °C e autoclave"),n("Desinfecção não elimina esporos")])
+ ])
+]);
+
+/* ============ FLASHCARDS ============ */
+const CARDS=[
+["Quem criou o 1º microscópio e que nome deu aos seres vistos?","Leeuwenhoek (1674) — “animálculos”.","História"],
+["O que Pasteur provou em 1857–1914 e o que surgiu em 1864?","Fermentação é feita por microrganismos (leveduras). 1864: aquecer a 56 °C → pasteurização.","História"],
+["Quais os 4 postulados de Koch?","Presença do micróbio, isolamento em cultura, reprodução da doença, reisolamento do agente.","História"],
+["Doença em que Koch fez sua 1ª prova bacteriana?","Carbúnculo (gado e ovelhas).","História"],
+["O que Fleming descobriu e como?","Penicilina (1928): bolor Penicillium contaminou placa de estafilococos e dissolveu a cultura ao redor.","História"],
+["Diferença entre patogenicidade e virulência?","Patogenicidade = capacidade de causar doença; virulência = o grau dessa capacidade.","Conceitos"],
+["Diferença entre infecção e doença infecciosa?","Infecção = invasão/colonização (pode não causar doença). Doença infecciosa = infecção que altera a saúde.","Conceitos"],
+["O que é patógeno oportunista? Exemplo.","Vive na microbiota, mas causa doença fora do local habitual/com imunidade baixa. Ex.: Candida albicans.","Conceitos"],
+["4 portas de entrada do organismo?","Cutânea/parenteral/conjuntiva; respiratório; gastrointestinal; urinário/genital.","Conceitos"],
+["O que são procariontes e eucariontes no mundo microbiano?","Procariontes: bactérias e arqueias. Eucariontes: fungos, protozoários e algas.","Procariontes × Eucariontes"],
+["Onde está o DNA nos eucariontes?","No núcleo envolto por membrana nuclear.","Procariontes × Eucariontes"],
+["Tamanho típico das bactérias?","0,2–2,0 µm de diâmetro e 2–8 µm de comprimento.","Bactérias"],
+["3 formas básicas das bactérias?","Cocos (esféricos), bacilos (bastão), espirais.","Bactérias"],
+["Função da cápsula/glicocálice?","Adesão, fator de virulência, escapar da fagocitose, formar biofilme.","Bactérias"],
+["Fímbrias × pili?","Fímbrias: aderência e colonização. Pili: longos, motilidade (deslizar nas mucosas).","Bactérias"],
+["Função principal da parede celular?","Dar forma e evitar ruptura por pressão osmótica; diferencia Gram+ e Gram–.","Bactérias"],
+["Como a penicilina age?","Interfere nas pontes peptídicas do peptideoglicano → parede fraca → lise.","Bactérias"],
+["Ordem dos reagentes da coloração de Gram?","Cristal violeta → lugol → álcool-acetona → safranina.","Bactérias"],
+["Por que Gram+ fica roxa?","Parede espessa de peptideoglicano prende os cristais violeta+iodo.","Bactérias"],
+["Por que Gram– fica rosa?","Camada fina de peptideoglicano (+LPS): o álcool-acetona tira os cristais e a safranina cora.","Bactérias"],
+["Função mais importante da membrana plasmática?","Barreira seletiva (permeabilidade seletiva). Também produz ATP via enzimas.","Bactérias"],
+["4 tipos de transporte na membrana?","Difusão passiva, difusão facilitada, transporte ativo e osmose.","Bactérias"],
+["O que é nucleoide e o que são plasmídeos?","Nucleoide: DNA único dupla-fita. Plasmídeos: DNA circular (ex.: resistência a antibióticos).","Bactérias"],
+["O que são endósporos e quem os forma?","Células dormentes resistentes; Clostridium e Bacillus.","Bactérias"],
+["Doenças causadas por Clostridium?","Gangrena, tétano, botulismo, intoxicação alimentar.","Bactérias"],
+["Temperatura ideal da maioria dos patógenos bacterianos?","35–38 °C.","Bactérias"],
+["As fases do crescimento bacteriano?","Lag (adaptação), log (exponencial), estacionária (nasce ≈ morre), declínio.","Bactérias"],
+["Aeróbia estrita × anaeróbia estrita × facultativa?","Só com O₂ × só sem O₂ × tolera mas não precisa de O₂ (E. coli, Salmonella).","Bactérias"],
+["Hifa septada × cenocítica?","Septada: com paredes cruzadas (septos); cenocítica: contínua.","Fungos"],
+["O que é micélio?","Conjunto de hifas (o “mofo”).","Fungos"],
+["O que são pseudo-hifas?","Brotos de levedura que não se soltam, formando fileira.","Fungos"],
+["O que é fungo dimórfico e por que importa?","Alterna levedura ↔ filamento; esporos inalados → fator de patogenicidade.","Fungos"],
+["Exemplos de fungos dimórficos?","Histoplasma, Paracoccidioides, Cryptococcus, Aspergillus.","Fungos"],
+["Esporo assexuado × sexuado?","Assexuado: das hifas, igual ao parental. Sexuado: fusão de núcleos de cepas opostas.","Fungos"],
+["Micose cutânea: agente e enzima?","Dermatófitos; queratinase degrada queratina da pele e unha.","Fungos"],
+["Micose subcutânea de exemplo?","Esporotricose (Sporothrix schenckii), adquirida de plantas.","Fungos"],
+["Como ocorre uma micose sistêmica?","Esporos do solo são inalados → pulmões → disseminam.","Fungos"],
+["Pneumocystis jirovecii: quando causa doença?","Em imunocomprometidos (ex.: AIDS) — patógeno oportunista.","Fungos"],
+["Por que vírus são parasitas intracelulares obrigatórios?","Usam o maquinário da célula hospedeira para se replicar.","Vírus"],
+["Como se classificam os vírus?","Pelo material genético: DNA/RNA, fita simples/dupla.","Vírus"],
+["Vírion, capsídeo, capsômero, envelope, espícula?","Vírion: partícula completa; capsídeo: capa proteica; capsômeros: subunidades; envelope: lipídeos/proteínas/carboidratos; espículas: projeções no envelope.","Vírus"],
+["Por que o herpes retorna?","Vírus de DNA ficam alojados em células e se multiplicam quando a imunidade cai.","Vírus"],
+["Fases da multiplicação viral?","Adsorção, penetração (endocitose), desnudamento, biossíntese, liberação.","Vírus"],
+["Trofozoíto × cisto?","Trofozoíto: forma que se alimenta/cresce. Cisto: forma de resistência no ambiente.","Protozoários"],
+["Esquizogonia?","Fissão múltipla: núcleo divide várias vezes antes da divisão celular.","Protozoários"],
+["Giardia: onde vive e como sai?","Intestino delgado; eliminada nas fezes como cisto.","Protozoários"],
+["Trichomonas vaginalis: transmissão?","Sexual (direta).","Protozoários"],
+["T. brucei × T. cruzi?","Doença do sono × doença de Chagas (barbeiro).","Protozoários"],
+["Apicomplexa: exemplos?","Plasmodium (malária, Anopheles), Toxoplasma gondii, Cryptosporidium.","Protozoários"],
+["Dioico × monoico?","Dioico: sexos separados. Monoico/hermafrodita: os dois órgãos no mesmo indivíduo.","Helmintos"],
+["Trematoda × Cestoda?","Trematoda: folha com ventosas. Cestoda: tênia, escólex com ventosas e proglótides.","Helmintos"],
+["Nematódeos intestinais frequentes?","Ascaris, ancilostomídeos, tricurídeos.","Helmintos"],
+["Fatores que levam a IACS?","Microrganismos no hospital, hospedeiro comprometido, cadeia de transmissão.","IACS"],
+["Vias de transmissão hospitalar?","Contato direto (profissional/paciente) e indireto (fômites, ventilação).","IACS"],
+["Grupo de risco 1, 2, 3 e 4?","1: baixo (probióticos). 2: moderado/tem tratamento (Candida, hep. B). 3: alto individual (M. tuberculosis). 4: alto e sem tratamento (Ebola).","Controle"],
+["Ambiente crítico × semicrítico?","Crítico: CTI/invasivos. Semicrítico: enfermarias, quartos, ambulatórios.","Controle"],
+["Limpeza concorrente × terminal?","Concorrente: diária. Terminal: máquinas e produtos mais fortes.","Controle"],
+["A limpeza elimina microrganismos?","Não: remove matéria orgânica e reduz a carga; é o 1º passo.","Controle"],
+["Assepsia × antissepsia?","Assepsia: impedir contaminação (mãos, luvas, campos estéreis). Antissepsia: química em tecido vivo (álcool 70%, clorexidina, PVPI).","Controle"],
+["Níveis de desinfecção e produtos?","Baixo: álcool 70%. Intermediário: hipoclorito/álcool 70%. Alto: glutaraldeído, ácido peracético.","Controle"],
+["O que só a esterilização elimina?","Esporos bacterianos. Estufa 180 °C e autoclave.","Controle"]
+];
+
+/* ============ COMPARATIVOS ============ */
+const COMP=`
+<h2>Gram positiva × Gram negativa</h2>
+<table><tr><th></th><th>Gram +</th><th>Gram –</th></tr>
+<tr><td>Cor final</td><td>Azul/roxa</td><td>Rosa/vermelha (safranina)</td></tr>
+<tr><td>Peptideoglicano</td><td>Camada espessa</td><td>Camada fina + lipopolissacarídeo de membrana</td></tr>
+<tr><td>Álcool-acetona</td><td>Não remove os cristais</td><td>Remove os cristais</td></tr>
+<tr><td>Exemplos (Quadro 1)</td><td>S. aureus, S. epidermidis, Lactobacillus, Corynebacterium, Enterococcus, viridans</td><td>E. coli, Pseudomonas, Neisseria, Haemophilus</td></tr></table>
+
+<h2>Oxigênio</h2>
+<table><tr><th>Tipo</th><th>Cresce…</th><th>Exemplo na apostila</th></tr>
+<tr><td>Aeróbia estrita</td><td>só com O₂</td><td>—</td></tr>
+<tr><td>Anaeróbia estrita</td><td>só sem O₂</td><td>Bacteroides</td></tr>
+<tr><td>Anaeróbia facultativa</td><td>com ou sem O₂</td><td>E. coli, Salmonella, enterobactérias</td></tr></table>
+
+<h2>Tipos de micose</h2>
+<table><tr><th>Tipo</th><th>Onde</th><th>Agente / exemplos</th></tr>
+<tr><td>Superficial</td><td>Cabelo e epiderme superficial</td><td>Pitiríase versicolor (Malassezia); Piedra branca (Trichosporon); Piedra negra (Piedraia hortae); Tínea negra (Hortaea werneckii)</td></tr>
+<tr><td>Cutânea</td><td>Pele, unha (queratina)</td><td>Dermatófitos: Microsporum, Trichophyton, Epidermophyton</td></tr>
+<tr><td>Subcutânea</td><td>Abaixo da pele</td><td>Esporotricose (Sporothrix schenckii); Cromoblastomicose; Micetoma</td></tr>
+<tr><td>Sistêmica / endêmica</td><td>Pulmão → órgãos</td><td>Coccidioidomicose; Histoplasmose (H. capsulatum); Blastomicose; Paracoccidioidomicose (P. brasiliensis)</td></tr>
+<tr><td>Oportunista</td><td>Imunocomprometidos</td><td>Candidíase; Criptococose (C. neoformans, C. gattii); Aspergilose (A. fumigatus); Mucormicose; Pneumocystis jirovecii; Peniciliose</td></tr></table>
+
+<h2>Bolor × levedura</h2>
+<table><tr><th></th><th>Bolor</th><th>Levedura</th></tr>
+<tr><td>Forma</td><td>Hifas e micélio</td><td>Unicelular, esférica/oval</td></tr>
+<tr><td>Reprodução assexuada</td><td>Fragmentação de hifas</td><td>Brotamento ou fissão</td></tr>
+<tr><td>Exemplo</td><td>Mofo, Penicillium, Aspergillus</td><td>Candida albicans, Saccharomyces cerevisiae</td></tr></table>
+
+<h2>Protozoários</h2>
+<table><tr><th>Grupo</th><th>Locomoção</th><th>Exemplos</th></tr>
+<tr><td>Flagelados (Mastigophora)</td><td>Flagelos</td><td>Trypanosoma cruzi, Leishmania, Giardia, Trichomonas</td></tr>
+<tr><td>Rizópodes (Sarcodina)</td><td>Pseudópodes</td><td>Entamoeba histolytica, Amoeba proteus</td></tr>
+<tr><td>Ciliados</td><td>Cílios</td><td>Balantidium coli</td></tr>
+<tr><td>Apicomplexa</td><td>Sem organelas locomotoras no adulto</td><td>Plasmodium, Toxoplasma gondii, Cryptosporidium</td></tr></table>
+
+<h2>Helmintos</h2>
+<table><tr><th>Grupo</th><th>Forma</th><th>Destaque</th></tr>
+<tr><td>Trematoda</td><td>Folha, 2 ventosas</td><td>Clonorchis sinensis</td></tr>
+<tr><td>Cestoda</td><td>Fita: escólex + proglótides</td><td>Tênias; proglótides maduras soltam ovos nas fezes</td></tr>
+<tr><td>Nematoda</td><td>Cilíndrico, trato digestório completo</td><td>Ascaris, Trichuris, Enterobius, Strongyloides, Necator, Ancylostoma</td></tr></table>
+<table><tr><th>Parasita</th><th>Transmissão</th><th>Doença</th></tr>
+<tr><td>Ascaris lumbricoides</td><td>Água/alimento com ovos</td><td>Ascaridíase</td></tr>
+<tr><td>Trichuris trichiura</td><td>Água/alimento com ovos</td><td>Tricuríase</td></tr>
+<tr><td>Enterobius vermicularis</td><td>Ingestão (ovos)*</td><td>Oxiuríase</td></tr>
+<tr><td>Strongyloides stercoralis</td><td>Larvas penetram a pele</td><td>Estrongiloidíase</td></tr>
+<tr><td>Necator americanus / Ancylostoma duodenale</td><td>Larvas penetram a pele</td><td>Ancilostomíase</td></tr></table>
+<p class="muted">* O Quadro 5 do PDF saiu embaralhado na conversão; esta linha foi remontada. Confira com a página original.</p>
+
+<h2>Grupos de risco biológico</h2>
+<table><tr><th>Grupo</th><th>Risco individual / coletivo</th><th>Exemplos</th></tr>
+<tr><td>1</td><td>Baixo / baixo</td><td>Probióticos, Lactobacillus, leveduras</td></tr>
+<tr><td>2</td><td>Moderado / baixo (há tratamento)</td><td>B. cereus, Toxoplasma, Candida, Giardia, hepatite B</td></tr>
+<tr><td>3</td><td>Alto / limitado</td><td>M. tuberculosis, C. botulinum</td></tr>
+<tr><td>4</td><td>Alto / alto (sem tratamento efetivo)</td><td>Ebola</td></tr></table>
+
+<h2>Limpeza → desinfecção → esterilização</h2>
+<table><tr><th>Processo</th><th>O que faz</th><th>Exemplos</th></tr>
+<tr><td>Limpeza</td><td>Tira sujeira e matéria orgânica; não elimina microrganismos</td><td>Água + detergente</td></tr>
+<tr><td>Antissepsia</td><td>Reduz microrganismos em tecido vivo</td><td>Álcool 70%, clorexidina, PVPI</td></tr>
+<tr><td>Desinfecção baixo nível</td><td>Bactérias vegetativas e vírus</td><td>Álcool 70%</td></tr>
+<tr><td>Desinfecção intermediária</td><td>+ fungos e bacilo da tuberculose</td><td>Hipoclorito de sódio, álcool 70%</td></tr>
+<tr><td>Desinfecção alto nível</td><td>Quase todos (não garante esporos)</td><td>Glutaraldeído, ácido peracético</td></tr>
+<tr><td>Esterilização</td><td>Todas as formas, inclusive esporos</td><td>Estufa 180 °C, autoclave</td></tr></table>
+`;
+
+const PLAN=`
+<h2>Como usar este material</h2>
+<div class="card tipbox"><ol>
+<li><b>Leia o mapa de fora para dentro:</b> abra só os 9 ramos (botão “Só ramos”) e tente dizer de cabeça o que há em cada um.</li>
+<li><b>Abra um ramo por vez</b> e estude. Passe o mouse num item e clique no <b>✓</b> quando dominar.</li>
+<li><b>Ligue o 🧠 Modo recall:</b> os detalhes ficam borrados. Tente lembrar, depois clique para conferir. Aquilo que errar, deixe sem ✓.</li>
+<li><b>Flashcards</b> para fixar (ida e volta: pergunta → resposta) e <b>Comparativos</b> para as tabelas de prova.</li>
+<li><b>Revisão espaçada:</b> refaça o recall depois de 1 dia, 7 dias e 30 dias. O que ficou sem ✓ volta primeiro.</li>
+</ol></div>
+
+<h2>Ordem sugerida (do mais lógico ao mais decorado)</h2>
+<div class="card"><ul>
+<li><b>Base:</b> 2 (conceitos) → 3 (procarionte × eucarionte) → 4 (bactérias, especialmente Gram e parede).</li>
+<li><b>Agentes:</b> 5 (fungos) → 6 (vírus) → 7 (protozoários e helmintos).</li>
+<li><b>Prática do técnico:</b> 8 (IACS) → 9 (controle). Provavelmente o mais cobrado na rotina do CETEC: dedique tempo extra.</li>
+<li><b>História (1):</b> deixe para o fim; é associar nome → ano → descoberta.</li>
+</ul></div>
+
+<h2>Ideias de memorização</h2>
+<div class="card"><ul>
+<li><b>Linha do tempo:</b> 1674 Leeuwenhoek → 1857 Pasteur → 1876 Koch → 1884/88 Gram → 1928 Fleming. Desenhe de cabeça.</li>
+<li><b>Gram:</b> “espesso prende roxo, fino fica rosa”. Refaça os 4 passos de olhos fechados.</li>
+<li><b>Postulados de Koch:</b> P-I-R-R (Presença, Isolamento, Reprodução, Reisolamento).</li>
+<li><b>Controle:</b> monte uma escada: limpeza → desinfecção (baixo → intermediário → alto) → esterilização. Pergunte a cada degrau “o que não elimina?” (limpeza: nada; desinfecção: esporos).</li>
+<li><b>Microbiota:</b> associe cada bactéria ao local do corpo com uma frase curta (ex.: “Lactobacillus mantém o pH da vagina”).</li>
+<li><b>Ensine:</b> explique um ramo em voz alta em 1 minuto, como se fosse para um colega.</li>
+</ul></div>
+
+<h2>⚠ Pontos da apostila para conferir com o professor</h2>
+<div class="card warn"><ul>
+<li><b>Fungos:</b> a seção 5 diz “fungos são células procariontes”. Isso contradiz a seção 3 (e o correto): fungos são <b>eucariontes</b>. Estude como eucariontes.</li>
+<li><b>Gram:</b> o texto cita 1888/1893 (faculdade) e 1884 (técnica). A coloração é de 1884; 1888 é o ingresso na faculdade.</li>
+<li><b>Fases do crescimento:</b> o texto diz “três fases” mas descreve quatro (lag, log, estacionária, declínio).</li>
+<li><b>Multiplicação viral:</b> diz “6 fases” mas lista 5 (adsorção, penetração, desnudamento, biossíntese, liberação).</li>
+<li><b>Protozoários:</b> diz que o trofozoíto está “na forma de cisto”; na verdade são formas diferentes (cisto = resistência; trofozoíto = ativo).</li>
+<li><b>Formas espirais:</b> a apostila chama todas de “vibriões”; vibrião é só a forma em vírgula (espirilos e espiroquetas são outras espirais).</li>
+<li><b>Quadros 3 e 5</b> saíram embaralhados na extração do PDF: confira com a página impressa.</li>
+</ul></div>
+<p class="muted">As 💡 dicas e os comparativos são organizações minhas do conteúdo da apostila; os fatos vêm do texto dela.</p>
+`;
+
+/* ============ MAPA ============ */
+const COLORS=["#c0392b","#d35400","#b8860b","#2e8b57","#0e8a8a","#2b6cb0","#6b46c1","#b83280","#5a6b7b"];
+const LS="micro-cetec-v1";
+let store={done:{},tips:true};
+try{store=Object.assign(store,JSON.parse(localStorage.getItem(LS)||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(store))}catch(e){}};
+
+let uid=0;
+(function prep(nd,d,parent,color){
+  nd.id=uid++;nd.d=d;nd.p=parent;
+  nd.tip=nd.t.startsWith("💡");
+  if(d===1){nd.col=COLORS[(parent.c.indexOf(nd))%COLORS.length]}else nd.col=color;
+  nd.col=nd.col||"#444";
+  nd.c.forEach(ch=>prep(ch,d+1,nd,nd.col));
+  nd.leaf=!nd.c.length;
+})(DATA,0,null,null);
+// ids já criados; recolocar cor dos ramos
+DATA.c.forEach((b,i)=>{(function col(x){x.col=COLORS[i%COLORS.length];x.c.forEach(col)})(b)});
+
+const all=[];(function f(x){all.push(x);x.c.forEach(f)})(DATA);
+const byId=Object.fromEntries(all.map(x=>[x.id,x]));
+const open=new Set([DATA.id]);
+let recall=false;const shown=new Set();let query="";let hits=new Set();
+
+const vp=document.getElementById("vp"),world=document.getElementById("world"),svg=document.getElementById("links");
+let tx=20,ty=20,sc=1;
+const applyT=()=>world.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`;
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const countLeaves=x=>x.tip?[]:(x.leaf?[x]:x.c.flatMap(countLeaves));
+
+function visible(x,out=[]){
+  if(x.tip&&!store.tips)return out;
+  out.push(x);
+  if(open.has(x.id))x.c.forEach(c=>visible(c,out));
+  return out;
+}
+function render(anchor){
+  let before=null;
+  if(anchor!=null){const el=world.querySelector(`[data-id="${anchor}"]`);if(el)before=el.getBoundingClientRect()}
+  world.querySelectorAll(".node").forEach(e=>e.remove());
+  const vis=visible(DATA);
+  const els={};
+  vp.classList.toggle("recall",recall);
+  const frag=document.createDocumentFragment();
+  vis.forEach(x=>{
+    const e=document.createElement("div");
+    e.className="node d"+Math.min(x.d,3)+(x.tip?" tip":"")+(x.leaf?" leaf":"")+(x.c.some(c=>!(c.tip&&!store.tips))?" has":"")+(open.has(x.id)?" open":"");
+    if(store.done[x.id])e.classList.add("done");
+    if(shown.has(x.id))e.classList.add("shown");
+    if(query){e.classList.add(hits.has(x.id)?"hit":"dim")}
+    e.dataset.id=x.id;
+    e.dataset.n=x.c.filter(c=>!(c.tip&&!store.tips)).length;
+    e.style.setProperty("--c",x.col);
+    let label=esc(x.t);
+    e.innerHTML=`<span class="t">${label}</span>`;
+    if(x.d===1){const L=countLeaves(x),dn=L.filter(l=>store.done[l.id]).length;e.innerHTML+=`<span class="badge">${dn}/${L.length}</span>`}
+    if(x.leaf&&!x.tip)e.insertAdjacentHTML("afterbegin",`<button class="ok" title="Marcar como dominado" aria-label="Marcar como dominado">✓</button>`);
+    els[x.id]=e;frag.appendChild(e);
+  });
+  world.appendChild(frag);
+  // medir
+  const W={},H={};vis.forEach(x=>{W[x.id]=els[x.id].offsetWidth;H[x.id]=els[x.id].offsetHeight});
+  const GX=46,GY=9,maxW=[];
+  vis.forEach(x=>{maxW[x.d]=Math.max(maxW[x.d]||0,W[x.id])});
+  const colX=[0];for(let d=1;d<maxW.length;d++)colX[d]=colX[d-1]+maxW[d-1]+GX;
+  const kids=x=>open.has(x.id)?x.c.filter(c=>vis.includes(c)):[];
+  const sub={};
+  (function h(x){const k=kids(x);k.forEach(h);const tot=k.reduce((a,c)=>a+sub[c.id],0)+GY*Math.max(0,k.length-1);x._ch=tot;sub[x.id]=Math.max(H[x.id],tot)})(DATA);
+  const pos={};
+  (function lay(x,top){
+    const s=sub[x.id],cy=top+s/2;pos[x.id]={x:colX[x.d],cy};
+    const k=kids(x);let y=top+(s-x._ch)/2;
+    k.forEach(c=>{lay(c,y);y+=sub[c.id]+GY});
+  })(DATA,0);
+  let paths="",maxX=0;
+  vis.forEach(x=>{
+    const p=pos[x.id],e=els[x.id];
+    e.style.left=p.x+"px";e.style.top=(p.cy-H[x.id]/2)+"px";
+    maxX=Math.max(maxX,p.x+W[x.id]);
+    kids(x).forEach(c=>{
+      const q=pos[c.id],x1=p.x+W[x.id],y1=p.cy,x2=q.x,y2=q.cy,m=(x1+x2)/2;
+      paths+=`<path d="M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}" fill="none" stroke="${c.col}" stroke-width="${Math.max(1.4,4-c.d*.7)}" stroke-linecap="round" opacity=".75"/>`;
+    });
+  });
+  svg.innerHTML=paths;
+  svg.setAttribute("width",maxX+60);svg.setAttribute("height",sub[DATA.id]+20);
+  world.style.width=(maxX+60)+"px";world.style.height=(sub[DATA.id]+20)+"px";
+  world._bounds={w:maxX+20,h:sub[DATA.id]};
+  if(before){const el=world.querySelector(`[data-id="${anchor}"]`);if(el){const a=el.getBoundingClientRect();tx+=before.left-a.left;ty+=before.top-a.top}}
+  applyT();progress();
+}
+function progress(){
+  const L=countLeaves(DATA),dn=L.filter(l=>store.done[l.id]).length;
+  document.getElementById("pt").textContent=`Dominado: ${dn} de ${L.length} (${Math.round(100*dn/L.length)}%)`;
+  document.getElementById("pb").style.width=(100*dn/L.length)+"%";
+}
+function fit(){
+  const b=world._bounds,r=vp.getBoundingClientRect();
+  sc=Math.min(1.1,(r.width-40)/b.w,(r.height-40)/b.h);
+  tx=20;ty=Math.max(20,(r.height-b.h*sc)/2);applyT();
+}
+// interação nó
+world.addEventListener("click",ev=>{
+  const ok=ev.target.closest(".ok");
+  const el=ev.target.closest(".node");if(!el)return;
+  const x=byId[el.dataset.id];
+  if(ok){store.done[x.id]=!store.done[x.id];if(!store.done[x.id])delete store.done[x.id];save();render(x.id);return}
+  if(vp._moved)return;
+  if(recall&&x.leaf&&!x.tip&&!shown.has(x.id)){shown.add(x.id);render(x.id);return}
+  if(x.c.length&&x.d>0){open.has(x.id)?open.delete(x.id):open.add(x.id);render(x.id)}
+});
+// pan / zoom (mouse, roda e pinça)
+const ptrs=new Map();let pinch=null;
+vp.addEventListener("pointerdown",e=>{if(e.target.closest(".ok"))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){drag={x:e.clientX,y:e.clientY,tx,ty};vp._moved=false}
+  else if(ptrs.size===2){drag=null;vp._moved=true;const [p,q]=[...ptrs.values()];pinch={d:Math.hypot(p.x-q.x,p.y-q.y),sc,tx,ty,mx:(p.x+q.x)/2,my:(p.y+q.y)/2}}});
+let drag=null;
+window.addEventListener("pointermove",e=>{
+  if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size>=2){const [p,q]=[...ptrs.values()],d=Math.hypot(p.x-q.x,p.y-q.y),r=vp.getBoundingClientRect();
+    const ns=Math.min(2.2,Math.max(.2,pinch.sc*d/pinch.d)),mx=pinch.mx-r.left,my=pinch.my-r.top;
+    tx=mx-(mx-pinch.tx)*(ns/pinch.sc);ty=my-(my-pinch.ty)*(ns/pinch.sc);sc=ns;applyT();return}
+  if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(Math.abs(dx)+Math.abs(dy)>6){vp._moved=true;vp.classList.add("drag")}
+  if(vp._moved){tx=drag.tx+dx;ty=drag.ty+dy;applyT()}});
+const endP=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(!ptrs.size){drag=null;vp.classList.remove("drag");setTimeout(()=>vp._moved=false,0)}};
+window.addEventListener("pointerup",endP);window.addEventListener("pointercancel",endP);
+vp.addEventListener("wheel",e=>{e.preventDefault();const r=vp.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;const k=Math.exp(-e.deltaY*.0015),ns=Math.min(2.2,Math.max(.2,sc*k));tx=mx-(mx-tx)*(ns/sc);ty=my-(my-ty)*(ns/sc);sc=ns;applyT()},{passive:false});
+
+// botões
+const $=id=>document.getElementById(id);
+$("bAll").onclick=()=>{all.forEach(x=>x.c.length&&open.add(x.id));render();fit()};
+$("bOne").onclick=()=>{open.clear();open.add(DATA.id);render();fit()};
+$("bFit").onclick=fit;
+$("bTip").onclick=e=>{store.tips=!store.tips;e.currentTarget.setAttribute("aria-pressed",store.tips);save();render()};
+$("bRecall").onclick=e=>{recall=!recall;shown.clear();e.currentTarget.setAttribute("aria-pressed",recall);render()};
+let rst=0;$("bReset").onclick=e=>{const b=e.currentTarget;if(!rst){b.textContent="Tem certeza? Clique de novo";rst=setTimeout(()=>{rst=0;b.textContent="Zerar ✓"},3000);return}clearTimeout(rst);rst=0;b.textContent="Zerar ✓";store.done={};save();render()};
+$("bTip").setAttribute("aria-pressed",store.tips);
+if(store.hideLeg)$("legend").style.display="none";
+$("hideLeg").onclick=()=>{$("legend").style.display="none";store.hideLeg=true;save()};
+$("q").addEventListener("input",e=>{
+  query=e.target.value.trim().toLowerCase();hits=new Set();
+  if(query){
+    all.forEach(x=>{if(x.t.toLowerCase().includes(query)){hits.add(x.id);for(let p=x.p;p;p=p.p)open.add(p.id)}});
+  }
+  render();
+});
+
+// abas
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t===b));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="v-"+b.dataset.v));
+  $("maptools").style.display=b.dataset.v==="map"?"flex":"none";
+  if(b.dataset.v==="map")fit();
+});
+$("compPage").innerHTML=COMP;$("planPage").innerHTML=PLAN;
+
+/* ============ FLASHCARDS ============ */
+const themes=[...new Set(CARDS.map(c=>c[2]))];
+let deck=[],ci=0,flipped=false,right=0,wrong=0,theme="Todos";
+function buildDeck(shuf){deck=CARDS.filter(c=>theme==="Todos"||c[2]===theme);if(shuf)deck.sort(()=>Math.random()-.5);ci=0;flipped=false;right=wrong=0;drawCard()}
+function drawCard(){
+  const f=$("fc");
+  if(ci>=deck.length){f.innerHTML=`<div class="flip"><b style="font-size:22px">Fim do baralho 🎉</b><p>Acertei: <b>${right}</b> · Revisar: <b>${wrong}</b></p></div>
+  <div class="row"><button class="b" id="again">Recomeçar</button></div>${opts()}`;$("again").onclick=()=>buildDeck(true);bindOpts();return}
+  const c=deck[ci];
+  f.innerHTML=`${opts()}<div class="muted" style="margin:10px 0">Card ${ci+1} de ${deck.length} · ✓ ${right} · ✗ ${wrong}</div>
+  <div class="flip ${flipped?"back":""}" id="card" tabindex="0"><small>${c[2]} · ${flipped?"resposta":"pergunta"}</small>${esc(flipped?c[1]:c[0])}</div>
+  <div class="row">${flipped?`<button class="b bad" id="no">Errei / revisar</button><button class="b good" id="yes">Acertei</button>`:`<button class="b" id="show">Ver resposta</button>`}</div>
+  <div class="muted" style="font-size:12px">Tente responder em voz alta antes de virar.</div>`;
+  bindOpts();
+  const flip=()=>{flipped=true;drawCard()};
+  $("card").onclick=()=>{flipped=!flipped;drawCard()};
+  if($("show"))$("show").onclick=flip;
+  if($("yes"))$("yes").onclick=()=>{right++;ci++;flipped=false;drawCard()};
+  if($("no"))$("no").onclick=()=>{wrong++;deck.push(c);ci++;flipped=false;drawCard()};
+}
+const opts=()=>`<div class="row"><select id="th" aria-label="Tema">${["Todos",...themes].map(t=>`<option ${t===theme?"selected":""}>${t}</option>`).join("")}</select><button class="b" id="shuf">Embaralhar</button></div>`;
+function bindOpts(){$("th").onchange=e=>{theme=e.target.value;buildDeck(true)};$("shuf").onclick=()=>buildDeck(true)}
+buildDeck(true);
+
+render();fit();
+addEventListener("load",()=>{render();fit()});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{render();fit()});
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{if($("v-map").classList.contains("on"))fit()},150)});
+</script>
+</body>
+</html>
